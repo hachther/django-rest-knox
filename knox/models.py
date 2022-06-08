@@ -9,7 +9,7 @@ User = settings.AUTH_USER_MODEL
 
 
 class AuthTokenManager(models.Manager):
-    def create(self, user, expiry=knox_settings.TOKEN_TTL):
+    def create(self, user, expiry=knox_settings.TOKEN_TTL, ip=None, user_agent=None):
         token = crypto.create_token_string()
         digest = crypto.hash_token(token)
 
@@ -18,7 +18,7 @@ class AuthTokenManager(models.Manager):
 
         instance = super(AuthTokenManager, self).create(
             token_key=token[:CONSTANTS.TOKEN_KEY_LENGTH], digest=digest,
-            user=user, expiry=expiry)
+            user=user, expiry=expiry, ip=ip, user_agent=user_agent)
         return instance, token
 
 
@@ -34,6 +34,9 @@ class AuthToken(models.Model):
                              related_name='auth_token_set', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
     expiry = models.DateTimeField(null=True, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True, verbose_name='IP')
+    user_agent = models.CharField(null=True, blank=True, max_length=200)
+    last_activity = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return '%s : %s' % (self.digest, self.user)

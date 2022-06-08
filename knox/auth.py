@@ -5,6 +5,7 @@ except ImportError:
         return a == b
 
 import binascii
+from datetime import datetime
 
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -51,6 +52,10 @@ class TokenAuthentication(BaseAuthentication):
             raise exceptions.AuthenticationFailed(msg)
 
         user, auth_token = self.authenticate_credentials(auth[1])
+
+        auth_token.last_activity = datetime.now()
+        auth_token.save()
+
         return (user, auth_token)
 
     def authenticate_credentials(self, token):

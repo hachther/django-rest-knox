@@ -12,6 +12,15 @@ from knox.models import AuthToken
 from knox.settings import knox_settings
 
 
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+
 class LoginView(APIView):
     authentication_classes = api_settings.DEFAULT_AUTHENTICATION_CLASSES
     permission_classes = (IsAuthenticated,)
@@ -49,18 +58,25 @@ class LoginView(APIView):
             ).data
         return data
 
-    def post(self, request, format=None):
+    def create_token(self, request, user=None):
+        if user is None:
+            user = request.user
+
         token_limit_per_user = self.get_token_limit_per_user()
         if token_limit_per_user is not None:
             now = timezone.now()
-            token = request.user.auth_token_set.filter(expiry__gt=now)
+            token = user.auth_token_set.filter(expiry__gt=now)
             if token.count() >= token_limit_per_user:
                 return Response(
                     {"error": "Maximum amount of tokens allowed per user exceeded."},
                     status=status.HTTP_403_FORBIDDEN
                 )
         token_ttl = self.get_token_ttl()
-        instance, token = AuthToken.objects.create(request.user, token_ttl)
+        return AuthToken.objects.create(user, token_ttl, ip=get_client_ip(request),
+                                        user_agent=request.META.get('HTTP_USER_AGENT', ''))
+
+    def post(self, request, format=None):
+        instance, token = self.create_token(request)
         user_logged_in.send(sender=request.user.__class__,
                             request=request, user=request.user)
         data = self.get_post_response_data(request, token, instance)
