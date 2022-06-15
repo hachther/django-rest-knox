@@ -37,6 +37,7 @@ class AuthToken(models.Model):
     ip = models.GenericIPAddressField(null=True, blank=True, verbose_name='IP')
     user_agent = models.CharField(null=True, blank=True, max_length=200)
     last_activity = models.DateTimeField(auto_now=True)
+    client = models.JSONField(null=True, blank=True)
 
     def __str__(self):
         return '%s : %s' % (self.digest, self.user)

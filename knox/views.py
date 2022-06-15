@@ -58,7 +58,7 @@ class LoginView(APIView):
             ).data
         return data
 
-    def create_token(self, request, user=None):
+    def create_token(self, request, user=None, client=None):
         if user is None:
             user = request.user
 
@@ -72,7 +72,7 @@ class LoginView(APIView):
                     status=status.HTTP_403_FORBIDDEN
                 )
         token_ttl = self.get_token_ttl()
-        return AuthToken.objects.create(user, token_ttl, ip=get_client_ip(request),
+        return AuthToken.objects.create(user, token_ttl, ip=get_client_ip(request), client=client,
                                         user_agent=request.META.get('HTTP_USER_AGENT', ''))
 
     def post(self, request, format=None):
