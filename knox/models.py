@@ -9,6 +9,9 @@ User = settings.AUTH_USER_MODEL
 
 
 class AuthTokenManager(models.Manager):
+    def get_queryset(self):
+        return super(AuthTokenManager, self).get_queryset().select_related('user', )
+
     def create(self, user, expiry=knox_settings.TOKEN_TTL, ip=None, user_agent=None, client=None):
         token = crypto.create_token_string()
         digest = crypto.hash_token(token)

@@ -18,6 +18,7 @@ from knox.crypto import hash_token
 from knox.models import AuthToken
 from knox.settings import CONSTANTS, knox_settings
 from knox.signals import token_expired
+from django.core.cache import cache
 
 
 class TokenAuthentication(BaseAuthentication):
@@ -51,10 +52,17 @@ class TokenAuthentication(BaseAuthentication):
                     'Token string should not contain spaces.')
             raise exceptions.AuthenticationFailed(msg)
 
-        user, auth_token = self.authenticate_credentials(auth[1])
+        cached_key = 'token_{}'.format(auth[1].decode('utf-8'))
+        cached = cache.get(cached_key)
+        if cached:
+            user = cached.user
+            auth_token = cached
+        else:
+            user, auth_token = self.authenticate_credentials(auth[1])
+            cache.set(cached_key, auth_token, (auth_token.expiry - timezone.now()).seconds - 60)
 
         auth_token.last_activity = datetime.now()
-        auth_token.save()
+        auth_token.save(update_fields=['last_activity'])
 
         return (user, auth_token)
 
